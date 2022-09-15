@@ -2,9 +2,22 @@
 
 本想是基于[PaddleSpeech](https://github.com/paddlepaddle/PaddleSpeech)开发的中文标点符号模型，默认使用的预训练模型为`ernie-3.0-medium-zh`。该模型可以用于语音识别结果添加标点符号，使用案例[PPASR](https://github.com/yeyupiaoling/PPASR)。
 
+
+# 安装环境
+ 1. 安装PaddlePaddle的GPU版本，命令如下，如果已经安装过了，请忽略。
+```shell
+conda install paddlepaddle-gpu==2.3.2 cudatoolkit=10.2 --channel https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/Paddle/
+```
+
+2. 安装PaddleNLP工具，命令如下。
+```shell
+python -m pip install paddlenlp -i https://mirrors.aliyun.com/pypi/simple/ -U
+```
+
 # 准备数据
 
-这里提供了一个较小的数据集[iwslt2012](https://paddlespeech.bj.bcebos.com/datasets/iwslt2012.tar.gz)，下载这个数据，解压并把得到的全部文本文件复制到`dataset`目录下，结构如下。如果想自定义数据集，可以参考这个数据集的格式进行制作，注意在制作标点符号列表`punc_vocab`时，不需要加上空格，项目默认会加上空格的。
+这里提供了一个较小的数据集[iwslt2012](https://paddlespeech.bj.bcebos.com/datasets/iwslt2012.tar.gz)，下载这个数据，解压并把得到的全部文本文件复制到`dataset`目录下，结构如下，这个数据集质量不是很好，中英文标点符号混合了，同时也有很多不合理的文本，例如网页的HTML代码，我们可以简单做一个处理，把英文的标点符号`,.?`替换成中文的`，。？`，如果想要更好的数据，可以进一步清理数据，或者自定义数据集。
+如果想自定义数据集，可以参考这个数据集的格式进行制作，如果是纯中文，可以不需要空格隔开文本。注意在制作标点符号列表`punc_vocab`时，不需要加上空格，项目默认会加上空格的。
 
 ```
 ├── dataset
@@ -128,5 +141,5 @@ text: 近几年不但我用书给女儿儿压岁也劝说亲朋不要给女儿�
 [2022-09-14 19:23:48,590] [    INFO] - tokenizer config file saved in /home/test/.paddlenlp/models/ernie-3.0-medium-zh/tokenizer_config.json
 [2022-09-14 19:23:48,591] [    INFO] - Special tokens file saved in /home/test/.paddlenlp/models/ernie-3.0-medium-zh/special_tokens_map.json
 [2022-09-14 19:23:49.960468 INFO   ] predictor:__init__:60 - 标点符号模型加载成功。
-近几年不，但我用书给女儿儿压岁，也劝说亲朋不要给女儿压岁钱而改送压岁书。
+近几年，不但我用书给女儿儿压岁，也劝说亲朋不要给女儿压岁钱而改送压岁书。
 ```

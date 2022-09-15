@@ -1,31 +1,43 @@
+import json
+import os
+import random
+
 import numpy as np
 from paddle.io import Dataset
 from paddlenlp.transformers import ErnieTokenizer
+from tqdm import tqdm
+
+from utils.logger import setup_logger
+
+logger = setup_logger(__name__)
 
 __all__ = ["PuncDatasetFromErnieTokenizer"]
-
-from tqdm import tqdm
 
 
 class PuncDatasetFromErnieTokenizer(Dataset):
     def __init__(self, data_path, punc_path, pretrained_token='ernie-3.0-medium-zh', seq_len=100):
         super().__init__()
+        self.inputs_data = []
+        self.labels = []
+        self.cache_data_path = os.path.join(os.path.dirname(data_path), f'{os.path.basename(data_path)}.cache')
         self.tokenizer = ErnieTokenizer.from_pretrained(pretrained_token)
         self.paddingID = self.tokenizer.pad_token_id
         self.seq_len = seq_len
+        # 加载标点符号字典
         self.punc2id = self.load_vocab(punc_path, extra_word_list=[" "])
         self.id2punc = {k: v for (v, k) in self.punc2id.items()}
-        tmp_seqs = open(data_path, encoding='utf-8').readlines()
-        self.txt_seqs = [i for seq in tmp_seqs for i in seq.split()]
+        # 预处理数据
+        self.txt_seqs = open(data_path, encoding='utf-8').readlines()
         self.preprocess(self.txt_seqs)
 
     def __len__(self):
-        return self.in_len
+        return len(self.inputs_data)
 
     def __getitem__(self, index):
-        return self.input_data[index], self.label[index]
+        return np.array(self.inputs_data[index], dtype='int64'), np.array(self.labels[index], dtype='int64')
 
-    def load_vocab(self, vocab_path, extra_word_list=[]):
+    @staticmethod
+    def load_vocab(vocab_path, extra_word_list=[]):
         n = len(extra_word_list)
         with open(vocab_path, encoding='utf-8') as vf:
             vocab = {word.strip(): i + n for i, word in enumerate(vf)}
@@ -34,32 +46,66 @@ class PuncDatasetFromErnieTokenizer(Dataset):
         return vocab
 
     def preprocess(self, txt_seqs: list):
-        input_data = []
-        label = []
-        for i in tqdm(range(len(txt_seqs) - 1)):
-            word = txt_seqs[i]
-            punc = txt_seqs[i + 1]
-            if word in self.punc2id:
-                continue
+        if not os.path.exists(self.cache_data_path):
+            logger.info(f'{self.cache_data_path}不存在，正在重新生成，时间比较长，请耐心等待...')
+            # 对数据按照从短到长排序
+            txt_seqs = sorted(txt_seqs, key=lambda k: len(k))
+            for text in tqdm(txt_seqs):
+                txt = text.replace('\n', '').split()[:self.seq_len]
+                label, input_data = [], []
+                for i in range(len(txt) - 1):
+                    # 获取输入数据
+                    word = txt[i]
+                    if word in self.punc2id.keys():
+                        continue
+                    token = self.tokenizer(word)
+                    x = token["input_ids"][1:-1]
+                    input_data.extend(x)
+                    # 获取标签数据
+                    punc = txt[i + 1]
+                    for _ in range(len(x) - 1):
+                        label.append(self.punc2id[" "])
+                    if punc not in self.punc2id:
+                        label.append(self.punc2id[" "])
+                    else:
+                        label.append(self.punc2id[punc])
+                self.inputs_data.append(input_data)
+                self.labels.append(label)
+            data = {'inputs_data': self.inputs_data, 'labels': self.labels}
+            with open(self.cache_data_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f)
+        else:
+            logger.info(f'正在加载：{self.cache_data_path}')
+            # 读取之前制作好的数据，如果是更换了数据集，需要删除这几个缓存文件
+            with open(self.cache_data_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                self.inputs_data = data['inputs_data']
+                self.labels = data['labels']
 
-            token = self.tokenizer(word)
-            x = token["input_ids"][1:-1]
-            input_data.extend(x)
-
-            for i in range(len(x) - 1):
-                label.append(self.punc2id[" "])
-
-            if punc not in self.punc2id:
-                label.append(self.punc2id[" "])
-            else:
-                label.append(self.punc2id[punc])
-
-        if len(input_data) != len(label):
+        if len(self.inputs_data) != len(self.labels):
             assert 'error: length input_data != label'
 
-        self.in_len = len(input_data) // self.seq_len
-        len_tmp = self.in_len * self.seq_len
-        input_data = input_data[:len_tmp]
-        label = label[:len_tmp]
-        self.input_data = np.array(input_data, dtype='int64').reshape(-1, self.seq_len)
-        self.label = np.array(label, dtype='int64').reshape(-1, self.seq_len)
+
+# 对一个batch的数据处理
+def collate_fn(batch):
+    # 找出数据长度最长的
+    batch = sorted(batch, key=lambda s: s[0].shape[0], reverse=True)
+    max_data_length = batch[0][0].shape[0]
+    batch_size = len(batch)
+    # 以最大的长度创建0张量
+    inputs = np.zeros((batch_size, max_data_length), dtype='int64')
+    labels = np.zeros((batch_size, max_data_length), dtype='int64')
+    indices = np.arange(batch_size).tolist()
+    random.shuffle(indices)
+    for x in indices:
+        sample = batch[x]
+        tensor = sample[0]
+        target = sample[1]
+        seq_length = tensor.shape[0]
+        label_length = target.shape[0]
+        # 输入文本数据的参数和标签长度要一样的
+        assert seq_length == label_length
+        # 将数据插入都0张量中，实现了padding
+        inputs[x, :seq_length] = tensor[:]
+        labels[x, :label_length] = target[:]
+    return inputs, labels

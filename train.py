@@ -11,8 +11,9 @@ from paddle.optimizer import Adam
 from paddle.optimizer.lr import ExponentialDecay
 from sklearn.metrics import f1_score
 
-from utils.reader import PuncDatasetFromErnieTokenizer
+from utils.reader import PuncDatasetFromErnieTokenizer, collate_fn
 from utils.model import ErnieLinear
+from utils.sampler import CustomBatchSampler
 from utils.utils import add_arguments, print_arguments
 from utils.logger import setup_logger
 
@@ -24,7 +25,7 @@ add_arg = functools.partial(add_arguments, argparser=parser)
 add_arg('num_classes',      int,    4,                        '字符分类大小，标点符号数量加1，因为开头还有空格')
 add_arg('batch_size',       int,    32,                       '训练的批量大小')
 add_arg('num_workers',      int,    8,                        '读取数据的线程数量')
-add_arg('num_epoch',        int,    20,                       '训练的轮数')
+add_arg('num_epoch',        int,    100,                      '训练的轮数')
 add_arg('learning_rate',    float,  1.0e-5,                   '初始学习率的大小')
 add_arg('train_data_path',  str,    'dataset/train.txt',      '训练数据的数据文件路径')
 add_arg('dev_data_path',    str,    'dataset/dev.txt',        '测试数据的数据文件路径')
@@ -37,7 +38,6 @@ print_arguments(args)
 
 
 def train():
-    logger.info('正在预处理数据集，时间比较长，请耐心等待...')
     train_dataset = PuncDatasetFromErnieTokenizer(data_path=args.train_data_path,
                                                   punc_path=args.punc_path,
                                                   pretrained_token=args.pretrained_token,
@@ -46,14 +46,19 @@ def train():
                                                 punc_path=args.punc_path,
                                                 pretrained_token=args.pretrained_token,
                                                 seq_len=100)
+    train_batch_sampler = CustomBatchSampler(train_dataset,
+                                             batch_size=args.batch_size,
+                                             drop_last=True,
+                                             shuffle=True)
     train_loader = DataLoader(train_dataset,
-                              shuffle=True,
-                              num_workers=args.num_workers,
-                              batch_size=args.batch_size)
+                              collate_fn=collate_fn,
+                              batch_sampler=train_batch_sampler,
+                              num_workers=args.num_workers)
 
     dev_loader = DataLoader(dev_dataset,
                             batch_size=args.batch_size,
                             shuffle=False,
+                            collate_fn=collate_fn,
                             drop_last=False,
                             num_workers=args.num_workers)
     logger.info('预处理数据集完成！')
@@ -61,7 +66,7 @@ def train():
     model = ErnieLinear(pretrained_token=args.pretrained_token, num_classes=args.num_classes)
     criterion = nn.CrossEntropyLoss()
 
-    scheduler = ExponentialDecay(learning_rate=args.learning_rate, gamma=0.9999)
+    scheduler = ExponentialDecay(learning_rate=args.learning_rate, gamma=0.8)
     optimizer = Adam(learning_rate=scheduler,
                      parameters=model.parameters(),
                      weight_decay=paddle.regularizer.L2Decay(1.0e-6))
@@ -79,7 +84,6 @@ def train():
             optimizer.clear_grad()
             loss.backward()
             optimizer.step()
-            scheduler.step()
             F1_score = f1_score(labels.numpy().tolist(), pred.numpy().tolist(), average="macro")
             train_times.append((time.time() - start) * 1000)
             # 多卡训练只使用一个进程打印
@@ -90,6 +94,7 @@ def train():
                     'Train epoch: [{}/{}], batch: [{}/{}], loss: {:.5f}, f1_score: {:.5f}, learning rate: {:>.8f}, eta: {}'.format(
                         epoch, args.num_epoch, batch_id, len(train_loader), loss.numpy()[0], F1_score, scheduler.get_lr(), eta_str))
             start = time.time()
+        scheduler.step()
         model.eval()
         eval_loss = []
         eval_f1_score = []
