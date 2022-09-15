@@ -1,6 +1,6 @@
 # 中文标点符号模型
 
-本想是基于[PaddleSpeech](https://github.com/paddlepaddle/PaddleSpeech)开发的中文标点符号模型，默认使用的预训练模型为`ernie-3.0-medium-zh`。该模型可以用于语音识别结果添加标点符号，使用案例[PPASR](https://github.com/yeyupiaoling/PPASR)。
+本想是基于[PaddleSpeech](https://github.com/paddlepaddle/PaddleSpeech)开发的中文标点符号模型，默认使用的预训练模型为`ernie-3.0-medium-zh`，做了一些优化，识别效果更佳。该模型可以用于语音识别结果添加标点符号，使用案例[PPASR](https://github.com/yeyupiaoling/PPASR)。
 
 
 # 安装环境
