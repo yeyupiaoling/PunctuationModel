@@ -126,7 +126,7 @@ W0914 19:20:42.192952 12045 device_context.cc:465] device: 0, cuDNN Version: 7.6
 
 # 给文本添加标点符号
 
-使用导出的预测模型为文本添加标点符号，通过`text`参数指定中文文本，实现添加标点符号，这可以应用在语音识别结果上面，具体可以参考[PPASR](https://github.com/yeyupiaoling/PPASR)语音识别项目。
+使用导出的预测模型为文本添加标点符号，也可以下载[博主提供的模型](https://download.csdn.net/download/qq_33200967/86539773)，解压到`dataset`目录下，通过`text`参数指定中文文本，实现添加标点符号，这可以应用在语音识别结果上面，具体可以参考[PPASR](https://github.com/yeyupiaoling/PPASR)语音识别项目。
 ```shell
 python infer.py --text=近几年不但我用书给女儿儿压岁也劝说亲朋不要给女儿压岁钱而改送压岁书
 ```
