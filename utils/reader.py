@@ -52,6 +52,7 @@ class PuncDatasetFromErnieTokenizer(Dataset):
             txt_seqs = sorted(txt_seqs, key=lambda k: len(k))
             for text in tqdm(txt_seqs):
                 txt = text.replace('\n', '').split()[:self.seq_len]
+                if txt[-1] not in self.punc2id.keys(): txt += ' '
                 label, input_data = [], []
                 for i in range(len(txt) - 1):
                     # 获取输入数据
