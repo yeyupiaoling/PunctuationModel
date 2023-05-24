@@ -46,7 +46,6 @@ def evaluate():
     model = ErnieLinear(pretrained_token=args.pretrained_token, num_classes=len(test_dataset.punc2id))
     criterion = nn.CrossEntropyLoss()
     model_dict = paddle.load(os.path.join(args.model_path, 'model.pdparams'))
-    print('====')
     model.set_state_dict(model_dict)
 
     model.eval()

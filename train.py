@@ -31,6 +31,7 @@ add_arg('train_data_path',  str,    'dataset/train.txt',      '训练数据的�
 add_arg('dev_data_path',    str,    'dataset/dev.txt',        '测试数据的数据文件路径')
 add_arg('punc_path',        str,    'dataset/punc_vocab',     '标点符号字典路径')
 add_arg('model_path',       str,    'models/checkpoint',      '保存检查点的目录')
+add_arg('resume_model',     str,    None,                     '恢复训练模型文件夹')
 add_arg('pretrained_token', str,    'ernie-3.0-medium-zh',
         '使用的ERNIE模型权重，具体查看：https://paddlenlp.readthedocs.io/zh/latest/model_zoo/transformers/ERNIE/contents.html#ernie')
 args = parser.parse_args()
@@ -97,6 +98,13 @@ def train():
     # 支持多卡训练
     if nranks > 1:
         optimizer = fleet.distributed_optimizer(optimizer)
+    # 恢复训练
+    if args.resume_model:
+        assert os.path.exists(os.path.join(args.resume_model, 'model.pdparams')), "模型参数文件不存在！"
+        assert os.path.exists(os.path.join(args.resume_model, 'optimizer.pdopt')), "优化方法参数文件不存在！"
+        model.set_state_dict(paddle.load(os.path.join(args.resume_model, 'model.pdparams')))
+        optimizer.set_state_dict(paddle.load(os.path.join(args.resume_model, 'optimizer.pdopt')))
+
     train_step, test_step = 0, 0
     train_times = []
     sum_batch = len(train_loader) * args.num_epoch
