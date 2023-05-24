@@ -11,27 +11,33 @@ conda install paddlepaddle-gpu==2.3.2 cudatoolkit=10.2 --channel https://mirrors
 
 2. 安装PaddleNLP工具，命令如下。
 ```shell
-python -m pip install paddlenlp -i https://mirrors.aliyun.com/pypi/simple/ -U
+python -m pip install paddlenlp visualdl -i https://mirrors.aliyun.com/pypi/simple/ -U
 ```
 
 # 准备数据
 
 这里提供了一个较小的数据集[iwslt2012](https://paddlespeech.bj.bcebos.com/datasets/iwslt2012.tar.gz)，下载这个数据，解压并把得到的全部文本文件复制到`dataset`目录下，结构如下，这个数据集质量不是很好，中英文标点符号混合了，同时也有很多不合理的文本，例如网页的HTML代码，我们可以简单做一个处理，把英文的标点符号`,.?`替换成中文的`，。？`，如果想要更好的数据，可以进一步清理数据，或者自定义数据集。
+
+该数据作者做了一些清洗，但还是有不少问题，例如有很多句子结束没有标点符号，如果有开发者对这个清洗更好的，或者有其他更好的数据欢迎提PR更新数据，可不要吝啬哦！
+
 如果想自定义数据集，可以参考这个数据集的格式进行制作，如果是纯中文，可以不需要空格隔开文本。注意在制作标点符号列表`punc_vocab`时，不需要加上空格，项目默认会加上空格的。
 
 ```
 ├── dataset
-│   ├── dev.txt
-│   ├── punc_vocab
-│   ├── test.txt
-│   └── train.txt
+  ├── dev.txt
+  ├── punc_vocab
+  ├── test.txt
+  └── train.txt
 ```
 
 # 训练
 
 准备好数据集之后，就可以执行`train.py`开始训练，如果是自定义数据集，在开始训练之前，要注意修改类别数量参数`num_classes`，执行命令如下，第一次训练时会下载ernie预训练模型，所以需要联网。
 ```shell
+# 单机单卡
 python train.py
+# 单价多卡
+python -m paddle.distributed.launch --devices=0,1 train.py
 ```
 
 训练输出的日志：

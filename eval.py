@@ -9,7 +9,7 @@ from sklearn.metrics import f1_score
 
 from utils.logger import setup_logger
 from utils.model import ErnieLinear
-from utils.reader import PuncDatasetFromErnieTokenizer
+from utils.reader import PuncDatasetFromErnieTokenizer, collate_fn
 from utils.utils import add_arguments, print_arguments
 
 logger = setup_logger(__name__)
@@ -17,7 +17,6 @@ logger = setup_logger(__name__)
 
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
-add_arg('num_classes',      int,    4,                        '字符分类大小，标点符号数量加1，因为开头还有空格')
 add_arg('batch_size',       int,    32,                       '训练的批量大小')
 add_arg('num_workers',      int,    8,                        '读取数据的线程数量')
 add_arg('test_data_path',   str,    'dataset/test.txt',       '测试数据的数据文件路径')
@@ -39,12 +38,15 @@ def evaluate():
                              batch_size=args.batch_size,
                              shuffle=False,
                              drop_last=False,
+                             collate_fn=collate_fn,
                              num_workers=args.num_workers)
     logger.info('预处理数据集完成！')
 
-    model = ErnieLinear(pretrained_token=args.pretrained_token, num_classes=args.num_classes)
+    # num_classes为字符分类大小
+    model = ErnieLinear(pretrained_token=args.pretrained_token, num_classes=len(test_dataset.punc2id))
     criterion = nn.CrossEntropyLoss()
     model_dict = paddle.load(os.path.join(args.model_path, 'model.pdparams'))
+    print('====')
     model.set_state_dict(model_dict)
 
     model.eval()

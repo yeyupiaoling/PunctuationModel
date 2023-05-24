@@ -11,7 +11,7 @@ from utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 
-__all__ = ["PuncDatasetFromErnieTokenizer"]
+__all__ = ["PuncDatasetFromErnieTokenizer", "collate_fn"]
 
 
 class PuncDatasetFromErnieTokenizer(Dataset):
@@ -23,12 +23,11 @@ class PuncDatasetFromErnieTokenizer(Dataset):
         self.tokenizer = ErnieTokenizer.from_pretrained(pretrained_token)
         self.paddingID = self.tokenizer.pad_token_id
         self.seq_len = seq_len
-        # 加载标点符号字典
+        # 加载标点符号字典，因为开头还有空格
         self.punc2id = self.load_vocab(punc_path, extra_word_list=[" "])
         self.id2punc = {k: v for (v, k) in self.punc2id.items()}
         # 预处理数据
-        self.txt_seqs = open(data_path, encoding='utf-8').readlines()
-        self.preprocess(self.txt_seqs)
+        self.preprocess(data_path)
 
     def __len__(self):
         return len(self.inputs_data)
@@ -45,9 +44,10 @@ class PuncDatasetFromErnieTokenizer(Dataset):
             vocab[word] = i
         return vocab
 
-    def preprocess(self, txt_seqs: list):
+    def preprocess(self, data_path: str):
         if not os.path.exists(self.cache_data_path):
             logger.info(f'{self.cache_data_path}不存在，正在重新生成，时间比较长，请耐心等待...')
+            txt_seqs = open(data_path, encoding='utf-8').readlines()
             # 对数据按照从短到长排序
             txt_seqs = sorted(txt_seqs, key=lambda k: len(k))
             for text in tqdm(txt_seqs):
@@ -70,6 +70,8 @@ class PuncDatasetFromErnieTokenizer(Dataset):
                         label.append(self.punc2id[" "])
                     else:
                         label.append(self.punc2id[punc])
+                if len(input_data) != len(label):
+                    continue
                 self.inputs_data.append(input_data)
                 self.labels.append(label)
             data = {'inputs_data': self.inputs_data, 'labels': self.labels}

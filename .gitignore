@@ -1,4 +1,9 @@
 .idea/
-dataset/
+dataset/*
+!dataset/train.txt
+!dataset/dev.txt
+!dataset/test.txt
+!dataset/punc_vocab
 models/
+log/
 test.py

@@ -1,9 +1,9 @@
 import math
 
 import numpy as np
-from paddle.io import BatchSampler
+from paddle.io import BatchSampler, DistributedBatchSampler
 
-__all__ = ["CustomBatchSampler"]
+__all__ = ["CustomBatchSampler", "CustomDistributedBatchSampler"]
 
 
 def _batch_shuffle(indices, batch_size, epoch):
@@ -65,6 +65,74 @@ class CustomBatchSampler(BatchSampler):
         if self.shuffle:
             indices = _batch_shuffle(indices, self.batch_size, self.epoch)
         assert len(indices) == self.total_size, f"batch shuffle examples error: {len(indices)} : {self.total_size}"
+        assert len(indices) == self.num_samples
+        _sample_iter = iter(indices)
+
+        batch_indices = []
+        for idx in _sample_iter:
+            batch_indices.append(idx)
+            if len(batch_indices) == self.batch_size:
+                yield batch_indices
+                batch_indices = []
+        if not self.drop_last and len(batch_indices) > 0:
+            yield batch_indices
+
+        self.epoch += 1
+
+    def __len__(self):
+        num_samples = self.num_samples
+        num_samples += int(not self.drop_last) * (self.batch_size - 1)
+        return num_samples // self.batch_size
+
+
+class CustomDistributedBatchSampler(DistributedBatchSampler):
+    def __init__(self,
+                 dataset,
+                 batch_size,
+                 num_replicas=None,
+                 rank=None,
+                 shuffle=False,
+                 drop_last=False):
+        """Sortagrad Sampler for multi gpus.
+
+        Args:
+            dataset (paddle.io.Dataset):
+            batch_size (int): batch size for one gpu
+            num_replicas (int, optional): world size or numbers of gpus. Defaults to None.
+            rank (int, optional): rank id. Defaults to None.
+            shuffle (bool, optional): True for do shuffle, or else. Defaults to False.
+            drop_last (bool, optional): whether drop last batch which is less than batch size. Defaults to False.
+        """
+        super().__init__(dataset=dataset, batch_size=batch_size, num_replicas=num_replicas, rank=rank, shuffle=shuffle,
+                         drop_last=drop_last)
+
+    def __iter__(self):
+        num_samples = len(self.dataset)
+        indices = np.arange(num_samples).tolist()
+        indices += indices[:(self.total_size - len(indices))]
+        assert len(indices) == self.total_size
+        if self.shuffle:
+            indices = _batch_shuffle(indices, self.batch_size * self.nranks, self.epoch)
+        assert len(indices) == self.total_size, f"batch shuffle examples error: {len(indices)} : {self.total_size}"
+
+        # slice `self.batch_size` examples by rank id
+        def _get_indices_by_batch_size(indices):
+            subsampled_indices = []
+            last_batch_size = self.total_size % (self.batch_size * self.nranks)
+            assert last_batch_size % self.nranks == 0
+            last_local_batch_size = last_batch_size // self.nranks
+
+            for i in range(self.local_rank * self.batch_size, len(indices) - last_batch_size,
+                           self.batch_size * self.nranks):
+                subsampled_indices.extend(indices[i:i + self.batch_size])
+
+            indices = indices[len(indices) - last_batch_size:]
+            subsampled_indices.extend(
+                indices[self.local_rank * last_local_batch_size:(self.local_rank + 1) * last_local_batch_size])
+            return subsampled_indices
+
+        if self.nranks > 1:
+            indices = _get_indices_by_batch_size(indices)
 
         assert len(indices) == self.num_samples
         _sample_iter = iter(indices)
