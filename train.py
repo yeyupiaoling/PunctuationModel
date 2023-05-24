@@ -99,16 +99,19 @@ def train():
     if nranks > 1:
         optimizer = fleet.distributed_optimizer(optimizer)
     # 恢复训练
+    last_epoch = 0
     if args.resume_model:
         assert os.path.exists(os.path.join(args.resume_model, 'model.pdparams')), "模型参数文件不存在！"
         assert os.path.exists(os.path.join(args.resume_model, 'optimizer.pdopt')), "优化方法参数文件不存在！"
         model.set_state_dict(paddle.load(os.path.join(args.resume_model, 'model.pdparams')))
-        optimizer.set_state_dict(paddle.load(os.path.join(args.resume_model, 'optimizer.pdopt')))
+        opt_state = paddle.load(os.path.join(args.resume_model, 'optimizer.pdopt'))
+        last_epoch = opt_state['LR_Scheduler']['last_epoch']
+        optimizer.set_state_dict(opt_state)
 
     train_step, test_step = 0, 0
     train_times = []
     sum_batch = len(train_loader) * args.num_epoch
-    for epoch in range(args.num_epoch):
+    for epoch in range(last_epoch, args.num_epoch):
         epoch += 1
         start = time.time()
         for batch_id, (inputs, labels) in enumerate(train_loader()):
