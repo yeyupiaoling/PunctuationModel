@@ -18,6 +18,7 @@ logger = setup_logger(__name__)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 add_arg('batch_size',       int,    32,                       '训练的批量大小')
+add_arg('max_seq_len',      int,    200,                      '训练数据的最大长度')
 add_arg('num_workers',      int,    8,                        '读取数据的线程数量')
 add_arg('test_data_path',   str,    'dataset/test.txt',       '测试数据的数据文件路径')
 add_arg('punc_path',        str,    'dataset/punc_vocab',     '标点符号字典路径')
@@ -32,7 +33,7 @@ def evaluate():
     test_dataset = PuncDatasetFromErnieTokenizer(data_path=args.test_data_path,
                                                  punc_path=args.punc_path,
                                                  pretrained_token=args.pretrained_token,
-                                                 seq_len=100)
+                                                 max_seq_len=args.max_seq_len)
 
     test_loader = DataLoader(test_dataset,
                              batch_size=args.batch_size,

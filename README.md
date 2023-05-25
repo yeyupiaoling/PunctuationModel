@@ -11,7 +11,7 @@ conda install paddlepaddle-gpu==2.3.2 cudatoolkit=10.2 --channel https://mirrors
 
 2. 安装PaddleNLP工具，命令如下。
 ```shell
-python -m pip install paddlenlp visualdl -i https://mirrors.aliyun.com/pypi/simple/ -U
+python -m pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
 ```
 
 # 准备数据

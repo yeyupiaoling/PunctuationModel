@@ -15,14 +15,14 @@ __all__ = ["PuncDatasetFromErnieTokenizer", "collate_fn"]
 
 
 class PuncDatasetFromErnieTokenizer(Dataset):
-    def __init__(self, data_path, punc_path, pretrained_token='ernie-3.0-medium-zh', seq_len=100):
+    def __init__(self, data_path, punc_path, pretrained_token='ernie-3.0-medium-zh', max_seq_len=100):
         super().__init__()
         self.inputs_data = []
         self.labels = []
         self.cache_data_path = os.path.join(os.path.dirname(data_path), f'{os.path.basename(data_path)}.cache')
         self.tokenizer = ErnieTokenizer.from_pretrained(pretrained_token)
         self.paddingID = self.tokenizer.pad_token_id
-        self.seq_len = seq_len
+        self.max_seq_len = max_seq_len
         # 加载标点符号字典，因为开头还有空格
         self.punc2id = self.load_vocab(punc_path, extra_word_list=[" "])
         self.id2punc = {k: v for (v, k) in self.punc2id.items()}
@@ -33,7 +33,9 @@ class PuncDatasetFromErnieTokenizer(Dataset):
         return len(self.inputs_data)
 
     def __getitem__(self, index):
-        return np.array(self.inputs_data[index], dtype='int64'), np.array(self.labels[index], dtype='int64')
+        inputs_data = np.array(self.inputs_data[index][:self.max_seq_len], dtype='int64')
+        labels = np.array(self.labels[index][:self.max_seq_len], dtype='int64')
+        return inputs_data, labels
 
     @staticmethod
     def load_vocab(vocab_path, extra_word_list=[]):
@@ -51,7 +53,7 @@ class PuncDatasetFromErnieTokenizer(Dataset):
             # 对数据按照从短到长排序
             txt_seqs = sorted(txt_seqs, key=lambda k: len(k))
             for text in tqdm(txt_seqs):
-                txt = text.replace('\n', '').split()[:self.seq_len]
+                txt = text.replace('\n', '').split()
                 if txt[-1] not in self.punc2id.keys(): txt += ' '
                 label, input_data = [], []
                 for i in range(len(txt) - 1):

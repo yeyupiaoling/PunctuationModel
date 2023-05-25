@@ -24,6 +24,7 @@ logger = setup_logger(__name__)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 add_arg('batch_size',       int,    32,                       '训练的批量大小')
+add_arg('max_seq_len',      int,    200,                      '训练数据的最大长度')
 add_arg('num_workers',      int,    8,                        '读取数据的线程数量')
 add_arg('num_epoch',        int,    100,                      '训练的轮数')
 add_arg('learning_rate',    float,  1.0e-3,                   '初始学习率的大小')
@@ -32,7 +33,7 @@ add_arg('dev_data_path',    str,    'dataset/dev.txt',        '测试数据的�
 add_arg('punc_path',        str,    'dataset/punc_vocab',     '标点符号字典路径')
 add_arg('model_path',       str,    'models/checkpoint',      '保存检查点的目录')
 add_arg('resume_model',     str,    None,                     '恢复训练模型文件夹')
-add_arg('pretrained_token', str,    'ernie-3.0-medium-zh',
+add_arg('pretrained_token', str,    'ernie-3.0-nano-zh',
         '使用的ERNIE模型权重，具体查看：https://paddlenlp.readthedocs.io/zh/latest/model_zoo/transformers/ERNIE/contents.html#ernie')
 args = parser.parse_args()
 print_arguments(args)
@@ -56,11 +57,11 @@ def train():
     train_dataset = PuncDatasetFromErnieTokenizer(data_path=args.train_data_path,
                                                   punc_path=args.punc_path,
                                                   pretrained_token=args.pretrained_token,
-                                                  seq_len=100)
+                                                  max_seq_len=args.max_seq_len)
     dev_dataset = PuncDatasetFromErnieTokenizer(data_path=args.dev_data_path,
                                                 punc_path=args.punc_path,
                                                 pretrained_token=args.pretrained_token,
-                                                seq_len=100)
+                                                max_seq_len=args.max_seq_len)
     # 支持多卡训练
     if nranks > 1:
         train_batch_sampler = CustomDistributedBatchSampler(train_dataset,
