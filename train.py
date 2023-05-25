@@ -33,7 +33,7 @@ add_arg('dev_data_path',    str,    'dataset/dev.txt',        '测试数据的�
 add_arg('punc_path',        str,    'dataset/punc_vocab',     '标点符号字典路径')
 add_arg('model_path',       str,    'models/checkpoint',      '保存检查点的目录')
 add_arg('resume_model',     str,    None,                     '恢复训练模型文件夹')
-add_arg('pretrained_token', str,    'ernie-3.0-nano-zh',
+add_arg('pretrained_token', str,    'ernie-3.0-medium-zh',
         '使用的ERNIE模型权重，具体查看：https://paddlenlp.readthedocs.io/zh/latest/model_zoo/transformers/ERNIE/contents.html#ernie')
 args = parser.parse_args()
 print_arguments(args)
