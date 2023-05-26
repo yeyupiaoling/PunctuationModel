@@ -1,9 +1,5 @@
 .idea/
-dataset/*
-!dataset/train.txt
-!dataset/dev.txt
-!dataset/test.txt
-!dataset/punc_vocab
+dataset/
 models/
 log/
 test.py
