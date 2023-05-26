@@ -1,6 +1,6 @@
 # 中文标点符号模型
 
-本想是基于[PaddleSpeech](https://github.com/paddlepaddle/PaddleSpeech)开发的中文标点符号模型，默认使用的预训练模型为`ernie-3.0-medium-zh`，做了一些优化，识别效果更佳。该模型可以用于语音识别结果添加标点符号，使用案例[PPASR](https://github.com/yeyupiaoling/PPASR)。
+基于Ernie开发的中文标点符号模型，默认使用的预训练模型为`ernie-3.0-medium-zh`，该模型可以用于语音识别结果添加标点符号，使用案例[PPASR](https://github.com/yeyupiaoling/PPASR)。
 
 
 # 安装环境
@@ -16,11 +16,9 @@ python -m pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/sim
 
 # 准备数据
 
-这里提供了一个较小的数据集[iwslt2012](https://paddlespeech.bj.bcebos.com/datasets/iwslt2012.tar.gz)，下载这个数据，解压并把得到的全部文本文件复制到`dataset`目录下，结构如下，这个数据集质量不是很好，中英文标点符号混合了，同时也有很多不合理的文本，例如网页的HTML代码，我们可以简单做一个处理，把英文的标点符号`,.?`替换成中文的`，。？`，如果想要更好的数据，可以进一步清理数据，或者自定义数据集。
+项目提供了一个较小的数据集可以直接使用。如果想自定义数据集，可以参考这个数据集的格式进行制作。注意在制作标点符号列表`punc_vocab`时，不需要加上空格，项目默认会加上空格的。这里提供一个制作方式，首先可以在[这里](https://www.qishuta.info/)下载小说的TXT文件，将它们存放在`dataset/files`目录下，然后执行`clear_data.py`程序清洗和分割数据集，注意这个清洗并不是万能的，要更加自己下载的数据，修改清洗方式。
 
-该数据作者做了一些清洗，但还是有不少问题，例如有很多句子结束没有标点符号，如果有开发者对这个清洗更好的，或者有其他更好的数据欢迎提PR更新数据，可不要吝啬哦！
-
-如果想自定义数据集，可以参考这个数据集的格式进行制作，如果是纯中文，可以不需要空格隔开文本。注意在制作标点符号列表`punc_vocab`时，不需要加上空格，项目默认会加上空格的。
+如何想训练更多的标点符号，可以在`punc_vocab`增加，`punc_vocab`默认只有`，。？`三个标点符号，注意在制作标点符号列表`punc_vocab`时，不需要加上空格，项目默认会加上空格的。
 
 ```
 ├── dataset
@@ -132,7 +130,7 @@ W0914 19:20:42.192952 12045 device_context.cc:465] device: 0, cuDNN Version: 7.6
 
 # 给文本添加标点符号
 
-使用导出的预测模型为文本添加标点符号，也可以下载[博主提供的模型](https://download.csdn.net/download/qq_33200967/86539773)，解压到`dataset`目录下，通过`text`参数指定中文文本，实现添加标点符号，这可以应用在语音识别结果上面，具体可以参考[PPASR](https://github.com/yeyupiaoling/PPASR)语音识别项目。
+使用导出的预测模型为文本添加标点符号，也可以下载博主提供的模型[三个标点符号](https://download.csdn.net/download/qq_33200967/86539773)和[五个标点符号](https://download.csdn.net/download/qq_33200967/75664996)，解压到`dataset`目录下，通过`text`参数指定中文文本，实现添加标点符号，这可以应用在语音识别结果上面，具体可以参考[PPASR](https://github.com/yeyupiaoling/PPASR)语音识别项目。
 ```shell
 python infer.py --text=近几年不但我用书给女儿儿压岁也劝说亲朋不要给女儿压岁钱而改送压岁书
 ```

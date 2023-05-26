@@ -26,12 +26,12 @@ add_arg = functools.partial(add_arguments, argparser=parser)
 add_arg('batch_size',       int,    32,                       '训练的批量大小')
 add_arg('max_seq_len',      int,    200,                      '训练数据的最大长度')
 add_arg('num_workers',      int,    8,                        '读取数据的线程数量')
-add_arg('num_epoch',        int,    100,                      '训练的轮数')
-add_arg('learning_rate',    float,  1.0e-3,                   '初始学习率的大小')
+add_arg('num_epoch',        int,    30,                       '训练的轮数')
+add_arg('learning_rate',    float,  1.0e-5,                   '初始学习率的大小')
 add_arg('train_data_path',  str,    'dataset/train.txt',      '训练数据的数据文件路径')
 add_arg('dev_data_path',    str,    'dataset/dev.txt',        '测试数据的数据文件路径')
 add_arg('punc_path',        str,    'dataset/punc_vocab',     '标点符号字典路径')
-add_arg('model_path',       str,    'models/checkpoint',      '保存检查点的目录')
+add_arg('model_path',       str,    'models/',                '保存检查点的目录')
 add_arg('resume_model',     str,    None,                     '恢复训练模型文件夹')
 add_arg('pretrained_token', str,    'ernie-3.0-medium-zh',
         '使用的ERNIE模型权重，具体查看：https://paddlenlp.readthedocs.io/zh/latest/model_zoo/transformers/ERNIE/contents.html#ernie')
@@ -109,6 +109,7 @@ def train():
         last_epoch = opt_state['LR_Scheduler']['last_epoch']
         optimizer.set_state_dict(opt_state)
 
+    best_loss = 1e3
     train_step, test_step = 0, 0
     train_times = []
     sum_batch = len(train_loader) * args.num_epoch
@@ -156,14 +157,23 @@ def train():
                     batch_id, len(dev_loader), loss.numpy()[0], F1_score))
         eval_loss1 = sum(eval_loss) / len(eval_loss)
         eval_f1_score1 = sum(eval_f1_score) / len(eval_f1_score)
-        logger.info('Avg eval, loss: {:.5f}, f1_score: {:.5f}'.format(eval_loss1, eval_f1_score1))
+        if eval_loss1 < best_loss:
+            best_loss = eval_loss1
+            # 保存最优模型
+            if local_rank == 0:
+                os.makedirs(os.path.join(args.model_path, "best_checkpoint"), exist_ok=True)
+                paddle.save(model.state_dict(), os.path.join(args.model_path, 'best_checkpoint/model.pdparams'))
+                paddle.save(optimizer.state_dict(), os.path.join(args.model_path, 'best_checkpoint/optimizer.pdopt'))
+                logger.info(f'模型保存在：{args.model_path}')
+        logger.info('Avg eval, loss: {:.5f}, f1_score: {:.5f} best loss: {:.5f}'.
+                    format(eval_loss1, eval_f1_score1, best_loss))
         model.train()
         if local_rank == 0:
             writer.add_scalar('Test/Loss', eval_loss1, test_step)
             writer.add_scalar('Test/F1_Score', eval_f1_score1, test_step)
-            os.makedirs(args.model_path, exist_ok=True)
-            paddle.save(model.state_dict(), os.path.join(args.model_path, 'model.pdparams'))
-            paddle.save(optimizer.state_dict(), os.path.join(args.model_path, 'optimizer.pdopt'))
+            os.makedirs(os.path.join(args.model_path, "checkpoint"), exist_ok=True)
+            paddle.save(model.state_dict(), os.path.join(args.model_path, 'checkpoint/model.pdparams'))
+            paddle.save(optimizer.state_dict(), os.path.join(args.model_path, 'checkpoint/optimizer.pdopt'))
             logger.info(f'模型保存在：{args.model_path}')
             test_step += 1
 

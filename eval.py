@@ -22,7 +22,7 @@ add_arg('max_seq_len',      int,    200,                      '评估数据的�
 add_arg('num_workers',      int,    8,                        '读取数据的线程数量')
 add_arg('test_data_path',   str,    'dataset/test.txt',       '测试数据的数据文件路径')
 add_arg('punc_path',        str,    'dataset/punc_vocab',     '标点符号字典路径')
-add_arg('model_path',       str,    'models/checkpoint',      '加载检查点的目录')
+add_arg('model_path',       str,    'models/best_checkpoint', '加载检查点的目录')
 add_arg('pretrained_token', str,    'ernie-3.0-medium-zh',    '使用的ERNIE模型权重')
 args = parser.parse_args()
 print_arguments(args)
