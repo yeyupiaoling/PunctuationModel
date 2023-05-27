@@ -161,20 +161,22 @@ def train():
             best_loss = eval_loss1
             # 保存最优模型
             if local_rank == 0:
-                os.makedirs(os.path.join(args.model_path, "best_checkpoint"), exist_ok=True)
-                paddle.save(model.state_dict(), os.path.join(args.model_path, 'best_checkpoint/model.pdparams'))
-                paddle.save(optimizer.state_dict(), os.path.join(args.model_path, 'best_checkpoint/optimizer.pdopt'))
-                logger.info(f'模型保存在：{args.model_path}')
+                save_dir = os.path.join(args.model_path, "best_checkpoint")
+                os.makedirs(save_dir, exist_ok=True)
+                paddle.save(model.state_dict(), os.path.join(save_dir, 'model.pdparams'))
+                paddle.save(optimizer.state_dict(), os.path.join(save_dir, 'optimizer.pdopt'))
+                logger.info(f'模型保存在：{save_dir}')
         logger.info('Avg eval, loss: {:.5f}, f1_score: {:.5f} best loss: {:.5f}'.
                     format(eval_loss1, eval_f1_score1, best_loss))
         model.train()
         if local_rank == 0:
             writer.add_scalar('Test/Loss', eval_loss1, test_step)
             writer.add_scalar('Test/F1_Score', eval_f1_score1, test_step)
-            os.makedirs(os.path.join(args.model_path, "checkpoint"), exist_ok=True)
-            paddle.save(model.state_dict(), os.path.join(args.model_path, 'checkpoint/model.pdparams'))
-            paddle.save(optimizer.state_dict(), os.path.join(args.model_path, 'checkpoint/optimizer.pdopt'))
-            logger.info(f'模型保存在：{args.model_path}')
+            save_dir = os.path.join(args.model_path, "checkpoint")
+            os.makedirs(save_dir, exist_ok=True)
+            paddle.save(model.state_dict(), os.path.join(save_dir, 'model.pdparams'))
+            paddle.save(optimizer.state_dict(), os.path.join(save_dir, 'optimizer.pdopt'))
+            logger.info(f'模型保存在：{save_dir}')
             test_step += 1
 
 
