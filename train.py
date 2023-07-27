@@ -132,9 +132,9 @@ def train():
                 eta_str = str(timedelta(seconds=int(eta_sec / 1000)))
                 logger.info(
                     'Train epoch: [{}/{}], batch: [{}/{}], loss: {:.5f}, f1_score: {:.5f}, learning rate: {:>.8f}, eta: {}'.format(
-                        epoch, args.num_epoch, batch_id, len(train_loader), loss.numpy()[0], F1_score, scheduler.get_lr(), eta_str))
+                        epoch, args.num_epoch, batch_id, len(train_loader), float(loss), F1_score, scheduler.get_lr(), eta_str))
                 if local_rank == 0:
-                    writer.add_scalar('Train/Loss', loss.numpy()[0], train_step)
+                    writer.add_scalar('Train/Loss', float(loss), train_step)
                     writer.add_scalar('Train/F1_Score', F1_score, train_step)
                 train_step += 1
             start = time.time()
@@ -149,12 +149,12 @@ def train():
             y, logit = model(inputs)
             pred = paddle.argmax(logit, axis=1)
             loss = criterion(y, labels)
-            eval_loss.append(loss.numpy()[0])
+            eval_loss.append(float(loss))
             F1_score = f1_score(labels.numpy().tolist(), pred.numpy().tolist(), average="macro")
             eval_f1_score.append(F1_score)
             if batch_id % 100 == 0:
                 logger.info('Batch: [{}/{}], loss: {:.5f}, f1_score: {:.5f}'.format(
-                    batch_id, len(dev_loader), loss.numpy()[0], F1_score))
+                    batch_id, len(dev_loader), float(loss), F1_score))
         eval_loss1 = sum(eval_loss) / len(eval_loss)
         eval_f1_score1 = sum(eval_f1_score) / len(eval_f1_score)
         if eval_loss1 < best_loss:
