@@ -57,12 +57,12 @@ def evaluate():
         y, logit = model(inputs)
         pred = paddle.argmax(logit, axis=1)
         loss = criterion(y, labels)
-        eval_loss.append(loss.numpy()[0])
+        eval_loss.append(float(loss))
         F1_score = f1_score(labels.numpy().tolist(), pred.numpy().tolist(), average="macro")
         eval_f1_score.append(F1_score)
         if batch_id % 100 == 0:
             logger.info('Batch: [{}/{}], loss: {:.5f}, f1_score: {:.5f}'.format(
-                batch_id, len(test_loader), loss.numpy()[0], F1_score))
+                batch_id, len(test_loader), float(loss), F1_score))
     logger.info('Avg eval, loss: {:.5f}, f1_score: {:.5f}'.format(
         sum(eval_loss) / len(eval_loss), sum(eval_f1_score) / len(eval_f1_score)))
 
